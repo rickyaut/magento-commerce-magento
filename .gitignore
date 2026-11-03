@@ -1,4 +1,5 @@
 mysqldata
 opensearch
 podman-build-secret-*
-source/auth.json
+auth.json
+postgres_data

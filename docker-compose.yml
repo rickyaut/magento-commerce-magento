@@ -2,7 +2,7 @@ version: '3'
 
 services:
   web:
-    image: ricky/magento-web
+    image: localhost/ricky/magento-web:latest
     environment:
       - TZ=Australia/Melbourne
       - BASE_URL=http://localhost
@@ -16,9 +16,6 @@ services:
     ports:
       - '80:80'
       - '443:443'
-    volumes:
-      - ./magento2.conf:/etc/apache2/sites-enabled/magento2.conf
-      - ./magento2-ssl.conf:/etc/apache2/sites-enabled/magento2-ssl.conf
     depends_on:
       - db
       - opensearch
@@ -61,5 +58,26 @@ services:
       - 9200:9200
     networks:
       - dev-env
+  postgres:
+    image: docker.io/library/postgres:16
+    environment:
+      POSTGRES_DB: magento_ai
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: change-me
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform -d magento_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dev-env
+
+volumes:
+  postgres_data:
+
 networks:
   dev-env: {}

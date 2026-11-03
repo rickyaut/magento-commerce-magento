@@ -23,6 +23,8 @@ RUN openssl req -x509 -newkey rsa:4096 -keyout /etc/ssl/private/magento.key -out
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 COPY php.ini /usr/local/etc/php/conf.d/magento.ini
 COPY init-magento.sh /usr/local/bin/init-magento.sh
+COPY magento2.conf /etc/apache2/sites-enabled/magento2.conf
+COPY magento2-ssl.conf /etc/apache2/sites-enabled/magento2-ssl.conf
 RUN chmod +x /usr/local/bin/init-magento.sh
 
 WORKDIR /var/www

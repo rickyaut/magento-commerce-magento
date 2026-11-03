@@ -41,4 +41,17 @@ if ! grep -q 'db' app/etc/env.php 2>/dev/null; then
   sudo -u www-data php -d memory_limit=-1 bin/magento cache:flush
 fi
 
+# Fix invalid cache config (backend_options without backend key causes health check 500)
+php -r "
+\$env = include 'app/etc/env.php';
+if (isset(\$env['cache']['frontend'])) {
+  foreach (\$env['cache']['frontend'] as \$k => \$v) {
+    if (isset(\$v['backend_options']) && !isset(\$v['backend'])) {
+      \$env['cache']['frontend'][\$k] = ['id_prefix' => \$v['id_prefix'] ?? ''];
+    }
+  }
+  file_put_contents('app/etc/env.php', '<?php' . PHP_EOL . 'return ' . var_export(\$env, true) . ';' . PHP_EOL);
+}
+"
+
 exec apache2-foreground
