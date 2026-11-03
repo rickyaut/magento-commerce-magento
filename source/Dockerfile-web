@@ -1,0 +1,54 @@
+FROM composer:2 AS composer
+
+FROM php:8.3-apache
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    unzip curl less default-mysql-client openssl sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sSLf \
+        -o /usr/local/bin/install-php-extensions \
+        https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
+    chmod +x /usr/local/bin/install-php-extensions && \
+    install-php-extensions bcmath intl gd zip pdo_mysql soap xsl sockets ftp
+
+RUN a2enmod rewrite ssl headers && a2dissite 000-default
+
+RUN openssl req -x509 -newkey rsa:4096 -keyout /etc/ssl/private/magento.key -out /etc/ssl/certs/magento.crt \
+    -days 3650 -nodes -subj "/C=AU/ST=VIC/L=Melbourne/O=MyOrg" && \
+    openssl x509 -in /etc/ssl/certs/magento.crt -out /etc/ssl/certs/magento.pem
+
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+COPY php.ini /usr/local/etc/php/conf.d/magento.ini
+COPY init-magento.sh /usr/local/bin/init-magento.sh
+RUN chmod +x /usr/local/bin/init-magento.sh
+
+WORKDIR /var/www
+RUN --mount=type=secret,id=composer_auth,dst=/root/.composer/auth.json \
+    composer create-project --no-dev \
+    --repository=https://repo.magento.com/ \
+    magento/project-community-edition magento2 && \
+    cp /root/.composer/auth.json /root/auth.json.bak
+
+WORKDIR /var/www/magento2
+COPY src/ app/code/
+RUN chown -R www-data:www-data /var/www/magento2
+
+USER www-data
+RUN php -d memory_limit=-1 bin/magento module:enable --all && \
+    php -d memory_limit=-1 bin/magento module:disable Magento_AdminAdobeImsTwoFactorAuth Magento_TwoFactorAuth
+
+USER root
+RUN mv /root/auth.json.bak /root/.composer/auth.json && \
+    COMPOSER_HOME=/root/.composer php -d memory_limit=-1 bin/magento sampledata:deploy && \
+    rm /root/.composer/auth.json
+
+RUN chown -R www-data:www-data /var/www/magento2 && \
+    rm -rf /var/www/magento2/var/cache \
+           /var/www/magento2/var/page_cache \
+           /var/www/magento2/var/view_preprocessed \
+           /var/www/magento2/generated
+
+ENTRYPOINT ["/usr/local/bin/init-magento.sh"]

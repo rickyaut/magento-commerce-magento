@@ -1,0 +1,65 @@
+version: '3'
+
+services:
+  web:
+    image: ricky/magento-web
+    environment:
+      - TZ=Australia/Melbourne
+      - BASE_URL=http://localhost
+      - DB_HOST=db
+      - DB_NAME=magento2
+      - DB_USER=magento2
+      - DB_PWD=magento2
+      - SEARCH_ENGINE=opensearch
+      - OPENSEARCH_HOST=opensearch
+      - OPENSEARCH_PORT=9200
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./magento2.conf:/etc/apache2/sites-enabled/magento2.conf
+      - ./magento2-ssl.conf:/etc/apache2/sites-enabled/magento2-ssl.conf
+    depends_on:
+      - db
+      - opensearch
+    networks:
+      - dev-env
+  db:
+    image: mariadb:10.6.13
+    restart: always
+    environment:
+      TZ: 'Australia/Melbourne'
+      MYSQL_ROOT_PASSWORD: 'magento2'
+      MYSQL_USER: 'magento2'
+      MYSQL_PASSWORD: 'magento2'
+      MYSQL_DATABASE: 'magento2'
+    volumes:
+      - ./mysqldata:/var/lib/mysql
+    ports:
+      - 3306:3306
+    networks:
+      - dev-env
+  opensearch:
+    image: opensearchproject/opensearch:2
+    volumes:
+      - ./opensearch/data:/usr/share/opensearch/data
+    environment:
+      - TZ=Australia/Melbourne
+      - node.name=opensearch
+      - cluster.name=opensearch
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "DISABLE_SECURITY_PLUGIN=true"
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: always
+    ports:
+      - 9200:9200
+    networks:
+      - dev-env
+networks:
+  dev-env: {}

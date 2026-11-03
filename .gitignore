@@ -1,0 +1,4 @@
+mysqldata
+opensearch
+podman-build-secret-*
+source/auth.json
