@@ -1,0 +1,10 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+$ssoUrl = $block->getBaseUrl() . 'adminsso/sso/initiate';
+?>
+<div style="margin-top:10px;text-align:center">
+    <a href="<?= $block->escapeUrl($ssoUrl) ?>"
+       style="display:inline-block;padding:10px 20px;background:#ff9900;color:#fff;border-radius:4px;text-decoration:none;font-weight:bold;width:100%;box-sizing:border-box">
+        Login with Cognito
+    </a>
+</div>

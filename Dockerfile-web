@@ -5,14 +5,14 @@ FROM php:8.3-apache
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    unzip curl less default-mysql-client openssl sudo \
+    unzip curl less default-mysql-client openssl sudo librdkafka-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -sSLf \
         -o /usr/local/bin/install-php-extensions \
         https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
     chmod +x /usr/local/bin/install-php-extensions && \
-    install-php-extensions bcmath intl gd zip pdo_mysql soap xsl sockets ftp
+    install-php-extensions bcmath intl gd zip pdo_mysql soap xsl sockets ftp rdkafka
 
 RUN a2enmod rewrite ssl headers && a2dissite 000-default
 

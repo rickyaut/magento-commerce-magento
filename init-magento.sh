@@ -34,13 +34,16 @@ if ! grep -q 'db' app/etc/env.php 2>/dev/null; then
     --opensearch-host=$OPENSEARCH_HOST \
     --opensearch-port=$OPENSEARCH_PORT
 
-  sudo -u www-data php -d memory_limit=-1 bin/magento setup:upgrade
   sudo -u www-data php -d memory_limit=-1 bin/magento setup:di:compile
-  sudo -u www-data php -d memory_limit=-1 bin/magento indexer:reindex
   sudo -u www-data php -d memory_limit=-1 bin/magento setup:static-content:deploy -f
-  sudo -u www-data php -d memory_limit=-1 bin/magento cache:flush
+  sudo -u www-data php -d memory_limit=-1 bin/magento indexer:reindex
+else
+  # Subsequent boots: pick up any new/updated modules
+  sudo -u www-data php -d memory_limit=-1 bin/magento module:enable --all
+  sudo -u www-data php -d memory_limit=-1 bin/magento setup:upgrade
 fi
 
+sudo -u www-data php -d memory_limit=-1 bin/magento cache:flush
 # Fix invalid cache config (backend_options without backend key causes health check 500)
 php -r "
 \$env = include 'app/etc/env.php';

@@ -3,6 +3,9 @@ version: '3'
 services:
   web:
     image: localhost/ricky/magento-web:latest
+    ports:
+      - '80:80'
+      - '443:443'
     environment:
       - TZ=Australia/Melbourne
       - BASE_URL=http://localhost
@@ -13,12 +16,18 @@ services:
       - SEARCH_ENGINE=opensearch
       - OPENSEARCH_HOST=opensearch
       - OPENSEARCH_PORT=9200
-    ports:
-      - '80:80'
-      - '443:443'
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=order.placed
+      - COGNITO_REGION=${COGNITO_REGION:-ap-southeast-2}
+      - COGNITO_DOMAIN=${COGNITO_DOMAIN}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:-ap-southeast-2_lPK2PB3Hc}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID:-5qm9690pqgje0vmhkdkdunoc05}
+      - COGNITO_CLIENT_SECRET=${COGNITO_CLIENT_SECRET:-ol96ul9n2sep2ec831t45gdmclo18jcu8ls6qtjv7sb3utc7urf}
+      - COGNITO_REDIRECT_URI=${COGNITO_REDIRECT_URI:-http://localhost/admin/adminsso/callback}
     depends_on:
       - db
       - opensearch
+      - kafka
     networks:
       - dev-env
   db:
@@ -31,7 +40,7 @@ services:
       MYSQL_PASSWORD: 'magento2'
       MYSQL_DATABASE: 'magento2'
     volumes:
-      - ./mysqldata:/var/lib/mysql
+      - ./mysql_data:/var/lib/mysql
     ports:
       - 3306:3306
     networks:
@@ -39,7 +48,7 @@ services:
   opensearch:
     image: opensearchproject/opensearch:2
     volumes:
-      - ./opensearch/data:/usr/share/opensearch/data
+      - ./opensearch_data:/usr/share/opensearch/data
     environment:
       - TZ=Australia/Melbourne
       - node.name=opensearch
@@ -59,7 +68,7 @@ services:
     networks:
       - dev-env
   postgres:
-    image: docker.io/library/postgres:16
+    image: docker.io/library/postgres:17
     environment:
       POSTGRES_DB: magento_ai
       POSTGRES_USER: platform
@@ -76,8 +85,28 @@ services:
     networks:
       - dev-env
 
-volumes:
-  postgres_data:
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: kafka
+    environment:
+      TZ: Australia/Melbourne
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://0.0.0.0:9093,CONTROLLER://kafka:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
+      KAFKA_CLUSTER_ID: test-cluster-01
+      KAFKA_LOG_DIRS: /opt/kafka/data
+    volumes:
+      - ./kafka_data:/opt/kafka/data  # Persist Kafka data
+    networks:
+      - dev-env
+    ports:
+      - "9092:9092"
+      - "9093:9093"
 
 networks:
   dev-env: {}

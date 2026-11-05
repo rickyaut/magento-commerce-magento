@@ -1,5 +1,9 @@
-mysqldata
-opensearch
+kafka_data
+mysql_data
+opensearch_data/*
+!opensearch_data/.gitkeep
+postgres_data/*
+!postgres_data/.gitkeep
 podman-build-secret-*
 auth.json
-postgres_data
+.env
