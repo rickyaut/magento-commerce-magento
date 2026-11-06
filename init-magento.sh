@@ -34,6 +34,7 @@ if ! grep -q 'db' app/etc/env.php 2>/dev/null; then
     --opensearch-host=$OPENSEARCH_HOST \
     --opensearch-port=$OPENSEARCH_PORT
 
+  sudo -u www-data php -d memory_limit=-1 bin/magento setup:upgrade
   sudo -u www-data php -d memory_limit=-1 bin/magento setup:di:compile
   sudo -u www-data php -d memory_limit=-1 bin/magento setup:static-content:deploy -f
   sudo -u www-data php -d memory_limit=-1 bin/magento indexer:reindex

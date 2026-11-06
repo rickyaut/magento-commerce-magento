@@ -50,7 +50,7 @@ class SsoLoginPlugin
             $this->logger->info("Oaklayton_AdminSso: plugin login for {$user->getEmail()}");
 
             session_write_close();
-            $this->response->setRedirect($this->backendUrl->getBaseUrl() . 'admin/');
+            $this->response->setRedirect($this->backendUrl->getUrl('adminhtml/dashboard/index'));
             $this->response->sendResponse();
             exit;
 

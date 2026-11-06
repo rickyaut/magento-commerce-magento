@@ -62,9 +62,8 @@ class Index implements ActionInterface
             ]);
 
             $this->logger->info("Oaklayton_AdminSso: SSO callback success for {$email}");
-            // Build redirect URL with sso_token as path param, no secret key needed
-            $baseUrl = rtrim($this->backendUrl->getBaseUrl(), '/');
-            $this->response->setRedirect("{$baseUrl}/admin/dashboard/index/index/sso_token/{$token}/");
+            $redirectUrl = $this->backendUrl->getUrl('adminhtml/dashboard/index', ['sso_token' => $token]);
+            $this->response->setRedirect($redirectUrl);
 
         } catch (\Throwable $e) {
             $this->logger->error('Oaklayton_AdminSso: ' . $e->getMessage());

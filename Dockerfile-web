@@ -29,9 +29,10 @@ RUN chmod +x /usr/local/bin/init-magento.sh
 
 WORKDIR /var/www
 RUN --mount=type=secret,id=composer_auth,dst=/root/.composer/auth.json \
+    composer config -g policy.advisories.block false && \
     composer create-project --no-dev \
     --repository=https://repo.magento.com/ \
-    magento/project-community-edition magento2 && \
+    magento/project-community-edition=2.4.7-p4 magento2 && \
     cp /root/.composer/auth.json /root/auth.json.bak
 
 WORKDIR /var/www/magento2

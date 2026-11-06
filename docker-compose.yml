@@ -2,7 +2,7 @@ version: '3'
 
 services:
   web:
-    image: localhost/ricky/magento-web:latest
+    image: localhost/ricky/magento-web:2.4.7-p4
     ports:
       - '80:80'
       - '443:443'
@@ -24,10 +24,13 @@ services:
       - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID:-5qm9690pqgje0vmhkdkdunoc05}
       - COGNITO_CLIENT_SECRET=${COGNITO_CLIENT_SECRET:-ol96ul9n2sep2ec831t45gdmclo18jcu8ls6qtjv7sb3utc7urf}
       - COGNITO_REDIRECT_URI=${COGNITO_REDIRECT_URI:-http://localhost/admin/adminsso/callback}
+      - SEARCH_LAMBDA_URL=${SEARCH_LAMBDA_URL}
     depends_on:
       - db
       - opensearch
       - kafka
+    volumes:
+      - ./src:/var/www/magento2/app/code
     networks:
       - dev-env
   db:

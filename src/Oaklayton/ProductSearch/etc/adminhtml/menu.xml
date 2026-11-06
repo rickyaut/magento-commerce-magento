@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Oaklayton_ProductSearch::search_insights"
+             title="Search Insights"
+             module="Oaklayton_ProductSearch"
+             sortOrder="100"
+             parent="Magento_Catalog::catalog"
+             action="productsearch/insights/index"
+             resource="Oaklayton_ProductSearch::search_insights"/>
+    </menu>
+</config>

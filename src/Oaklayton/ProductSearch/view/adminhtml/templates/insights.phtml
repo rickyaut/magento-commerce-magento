@@ -1,0 +1,129 @@
+<?php
+/** @var \Magento\Backend\Block\Template $block */
+$lambdaUrl = rtrim(getenv('SEARCH_LAMBDA_URL') ?: '', '/');
+?>
+<div id="search-insights" style="padding:20px">
+    <h2><?= $block->escapeHtml(__('Search Insights')) ?></h2>
+
+    <div style="display:flex;gap:40px;flex-wrap:wrap">
+        <div style="flex:1;min-width:300px">
+            <h3><?= $block->escapeHtml(__('Word Cloud')) ?></h3>
+            <div id="word-cloud" style="border:1px solid #ddd;padding:16px;border-radius:4px"></div>
+        </div>
+        <div style="flex:1;min-width:300px">
+            <h3><?= $block->escapeHtml(__('Recent Searches')) ?></h3>
+            <table style="width:100%;border-collapse:collapse" id="recent-table">
+                <thead>
+                    <tr style="background:#f5f5f5">
+                        <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd"><?= $block->escapeHtml(__('Query')) ?></th>
+                    </tr>
+                </thead>
+                <tbody id="recent-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var base = <?= json_encode($lambdaUrl) ?>;
+
+    function loadCloud() {
+        fetch(base + '/insights/cloud')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var el = document.getElementById('word-cloud');
+                if (!data.words || !data.words.length) {
+                    el.textContent = 'No data yet.';
+                    return;
+                }
+                var words = data.words.map(function(w) { return {text: w.word, value: w.count}; });
+                renderWordCloud(el, words);
+            })
+            .catch(function(e) {
+                document.getElementById('word-cloud').textContent = 'Error: ' + e.message;
+            });
+    }
+
+    function renderWordCloud(container, words) {
+        var COLORS = ['#0b5fff','#e67e22','#27ae60','#8e44ad','#c0392b','#16a085','#d35400','#2c3e50','#7f8c8d','#2980b9'];
+        var GOLDEN = Math.PI * (3 - Math.sqrt(5));
+        var PAD = 4;
+        var width  = container.offsetWidth || 500;
+        var height = 320;
+        var cx = width / 2, cy = height / 2;
+        var maxR = Math.min(width, height) / 2 - 10;
+        var max  = words[0].value;
+
+        var canvas = document.createElement('canvas');
+        var ctx    = canvas.getContext('2d');
+        var font   = getComputedStyle(document.body).fontFamily || 'sans-serif';
+
+        function measure(text, px) {
+            ctx.font = '700 ' + px + 'px ' + font;
+            return ctx.measureText(text).width;
+        }
+
+        var placed = [];
+        var result = [];
+
+        for (var wi = 0; wi < words.length; wi++) {
+            var word  = words[wi];
+            var ratio = word.value / max;
+            var size  = Math.max(10, Math.round(12 + Math.pow(ratio, 1.2) * 60));
+            var fit   = null;
+
+            for (var attempt = 0; attempt < 10 && !fit; attempt++) {
+                var w = measure(word.text, size);
+                var h = size * 1.15;
+                if (w > width - 16 || h > height - 16) { size = Math.max(8, Math.round(size * 0.8)); continue; }
+                for (var i = 1; i < 60000; i++) {
+                    var r     = Math.sqrt(i) * 8.5;
+                    if (r > maxR) break;
+                    var theta = i * GOLDEN;
+                    var x     = cx + r * Math.cos(theta);
+                    var y     = cy + r * Math.sin(theta);
+                    var box   = {x: x - w/2 - PAD, y: y - h/2 - PAD, w: w + PAD*2, h: h + PAD*2};
+                    var overlaps = placed.some(function(p) {
+                        return box.x < p.x+p.w && box.x+box.w > p.x && box.y < p.y+p.h && box.y+box.h > p.y;
+                    });
+                    if (!overlaps) { placed.push(box); fit = {text: word.text, value: word.value, x: x, y: y, size: size}; break; }
+                }
+                if (!fit) size = Math.max(8, Math.round(size * 0.8));
+            }
+            if (fit) result.push(fit);
+        }
+
+        var svgParts = ['<svg width="' + width + '" height="' + height + '" xmlns="http://www.w3.org/2000/svg">'];
+        result.forEach(function(w, i) {
+            svgParts.push(
+                '<text x="' + w.x + '" y="' + w.y + '" text-anchor="middle" dominant-baseline="middle"' +
+                ' font-size="' + w.size + '" font-weight="700" fill="' + COLORS[i % COLORS.length] + '"' +
+                ' font-family="' + font + '"><title>' + w.text + ': ' + w.value + '×</title>' +
+                w.text.replace(/</g,'&lt;') + '</text>'
+            );
+        });
+        svgParts.push('</svg>');
+        container.innerHTML = svgParts.join('');
+    }
+
+    function loadRecent() {
+        fetch(base + '/insights/recent')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var tbody = document.getElementById('recent-body');
+                if (!data.queries || !data.queries.length) {
+                    tbody.innerHTML = '<tr><td style="padding:8px;color:#888">No searches yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.queries.map(function(q) {
+                    return '<tr><td style="padding:8px;border-bottom:1px solid #eee">'
+                        + q.query.replace(/</g, '&lt;') + '</td></tr>';
+                }).join('');
+            });
+    }
+
+    loadCloud();
+    loadRecent();
+})();
+</script>

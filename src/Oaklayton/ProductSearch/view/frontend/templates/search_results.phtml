@@ -1,0 +1,65 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+$lambdaUrl = rtrim(getenv('SEARCH_LAMBDA_URL') ?: '', '/');
+$query     = $block->escapeHtml($block->getRequest()->getParam('q', ''));
+$baseUrl   = rtrim($block->getBaseUrl(), '/');
+$mediaUrl  = $baseUrl . '/media/catalog/product';
+?>
+<div id="semantic-search" style="padding:20px 0">
+    <h2 style="margin-bottom:16px">
+        <?= $block->escapeHtml(__('Search Results for')) ?>:
+        <em><?= $query ?></em>
+    </h2>
+    <div id="search-results">
+        <p><?= $block->escapeHtml(__('Loading…')) ?></p>
+    </div>
+</div>
+
+<script>
+(function () {
+    var query    = <?= json_encode($block->getRequest()->getParam('q', '')) ?>;
+    var base     = <?= json_encode($lambdaUrl) ?>;
+    var storeUrl = <?= json_encode($baseUrl) ?>;
+    var mediaUrl = <?= json_encode($mediaUrl) ?>;
+
+    if (!query || !base) {
+        document.getElementById('search-results').innerHTML = '<p>No results.</p>';
+        return;
+    }
+
+    fetch(base + '/search', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({query: query, top_k: 10}),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var el = document.getElementById('search-results');
+        if (!data.results || !data.results.length) {
+            el.innerHTML = '<p><?= $block->escapeHtml(__('No products found.')) ?></p>';
+            return;
+        }
+        el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">'
+            + data.results.map(function(p) {
+                var productUrl = p.url_key ? storeUrl + '/' + p.url_key + '.html' : '#';
+                var imgSrc     = p.image && p.image !== 'no_selection'
+                    ? mediaUrl + p.image
+                    : 'https://via.placeholder.com/220x220?text=No+Image';
+                return '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden">'
+                    + '<a href="' + productUrl + '">'
+                    + '<img src="' + imgSrc + '" alt="' + p.name.replace(/"/g, '&quot;') + '" style="width:100%;height:220px;object-fit:cover;display:block">'
+                    + '</a>'
+                    + '<div style="padding:12px">'
+                    + '<a href="' + productUrl + '" style="font-weight:bold;color:#333;text-decoration:none;display:block;margin-bottom:6px">' + p.name.replace(/</g, '&lt;') + '</a>'
+                    + '<div style="color:#888;font-size:12px;margin-bottom:4px">SKU: ' + p.sku.replace(/</g, '&lt;') + '</div>'
+                    + (p.price ? '<div style="color:#1979c3;font-weight:bold">$' + parseFloat(p.price).toFixed(2) + '</div>' : '')
+                    + '</div>'
+                    + '</div>';
+            }).join('')
+            + '</div>';
+    })
+    .catch(function(e) {
+        document.getElementById('search-results').innerHTML = '<p>Search error: ' + e.message + '</p>';
+    });
+})();
+</script>
