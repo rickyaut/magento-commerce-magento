@@ -47,10 +47,7 @@ class SsoLoginPlugin
 
             $this->authSession->setUser($user);
             $this->authSession->processLogin();
-            $this->logger->info("Oaklayton_AdminSso: plugin login for {$user->getEmail()}");
-
-            session_write_close();
-            $this->response->setRedirect($this->backendUrl->getBaseUrl() . 'admin/');
+            $this->response->setRedirect($this->backendUrl->getUrl('adminhtml/dashboard'));
             $this->response->sendResponse();
             exit;
 

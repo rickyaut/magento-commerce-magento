@@ -1,7 +1,6 @@
 <?php
 namespace Oaklayton\AdminSso\Controller\Callback;
 
-use Magento\Backend\Model\UrlInterface as BackendUrl;
 use Magento\Framework\App\ActionInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\ResourceConnection;
@@ -15,10 +14,9 @@ class Index implements ActionInterface
     public function __construct(
         private readonly RequestInterface $request,
         private readonly ResponseInterface $response,
-        private readonly ResourceConnection $resource,
         private readonly UserFactory $userFactory,
         private readonly SessionManagerInterface $session,
-        private readonly BackendUrl $backendUrl,
+        private readonly ResourceConnection $resource,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -54,21 +52,19 @@ class Index implements ActionInterface
                 $this->logger->info("Oaklayton_AdminSso: auto-provisioned admin for {$email}");
             }
 
-            $token = bin2hex(random_bytes(32));
+            $token = bin2hex(random_bytes(16));
             $this->resource->getConnection()->insert('adminsso_token', [
                 'token'      => $token,
                 'user_id'    => $user->getId(),
-                'expires_at' => time() + 60,
+                'expires_at' => time() + 30,
             ]);
 
-            $this->logger->info("Oaklayton_AdminSso: SSO callback success for {$email}");
-            // Build redirect URL with sso_token as path param, no secret key needed
-            $baseUrl = rtrim($this->backendUrl->getBaseUrl(), '/');
-            $this->response->setRedirect("{$baseUrl}/admin/dashboard/index/index/sso_token/{$token}/");
+            $adminBase = rtrim(getenv('MAGENTO_ADMIN_FRONTNAME') ?: 'admin', '/');
+            $this->response->setRedirect('/' . $adminBase . '/?sso_token=' . $token);
 
         } catch (\Throwable $e) {
             $this->logger->error('Oaklayton_AdminSso: ' . $e->getMessage());
-            $this->response->setRedirect($this->backendUrl->getUrl(''));
+            $this->response->setRedirect('/admin/');
         }
 
         return $this->response;

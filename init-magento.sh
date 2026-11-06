@@ -4,7 +4,7 @@ set -e
 cd /var/www/magento2
 
 echo "Waiting for database..."
-until mysqladmin ping -h"$DB_HOST" -u"$DB_USER" -p"$DB_PWD" --ssl=false --silent 2>/dev/null; do
+until mysqladmin ping -h"$DB_HOST" -u"$DB_USER" -p"$DB_PWD" --skip-ssl --silent 2>/dev/null; do
   sleep 2
 done
 
@@ -40,6 +40,8 @@ if ! grep -q 'db' app/etc/env.php 2>/dev/null; then
 else
   # Subsequent boots: pick up any new/updated modules
   sudo -u www-data php -d memory_limit=-1 bin/magento module:enable --all
+  sudo -u www-data php -d memory_limit=-1 bin/magento module:disable \
+      Magento_AdminAdobeImsTwoFactorAuth Magento_TwoFactorAuth
   sudo -u www-data php -d memory_limit=-1 bin/magento setup:upgrade
 fi
 
